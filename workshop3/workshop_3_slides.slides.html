@@ -13634,10 +13634,10 @@ b      2.425752  0.705345         1.043276         3.808229
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <h1 id="Interpretting-Coefficients">Interpretting Coefficients<a class="anchor-link" href="#Interpretting-Coefficients">&#182;</a></h1><ul>
-<li>The mean rate of transactions across all customers is <em>1/(r/alpha)</em> = 1/(0.24/4.414) = 18.39</li>
-<li>This is interpreted as each customer is expected to make a transaction every 18.39 units of time</li>
+<li>The mean rate of transactions across all customers is alpha/r = 4.414/0.24 = 18.39</li>
+<li>This is interpreted as a randomly selected customer is expected to make a transaction every 18.39 units of time</li>
 <li>The mean probability of a customer becoming inactive after any purchase is a/(a + b) = 0.79/(0.79 + 2.42) = 0.25</li>
-<li>Another way of thinking about the dropout probability is the mean number of transactions 1/(a/(a+b)) = 4.1</li>
+<li>Another way of thinking about the dropout probability is the mean number of transactions (a+b)/a = (0.79 + 2.42)/0.79 = 4.1</li>
 </ul>
 
 </div>
