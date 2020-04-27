@@ -1,0 +1,156 @@
+---
+title: "Workshop 7 Notes & Code"
+subtitle: "Going Fast in R"
+author: "RMDS Team"
+date: "4/27/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Parallel Computing
+
+In order to use parallel computing capabilities in R, we are going to make use of the `doParallel` and `foreach` packages. If you do not have this installed, you can either search for it using the R Studio Package Manager or use the following code in an R console to install the package: `install.packages(c('doParallel', 'foreach'))`. 
+
+```{r cars}
+library(doParallel)
+library(foreach)
+
+## Function to be Parallelized
+
+yahtzee_sim <- function(num_sim){
+  
+  count_result <- 0
+  
+  for(i in 1:num_sim){
+    die_roll <- round(runif(n = 5, min = 1, max = 5))
+    if(length(unique(die_roll)) == 1){
+      count_result <- count_result + 1
+    }
+  }
+  
+  return(count_result)
+}
+
+```
+
+## Basic For-Loop Performance
+
+Using a basic for-loop, we can measure the start and stop time using the `Sys.time()` function and taking the difference between them. The following code chunk will measure how long it takes to run a single simulation of 10,000,000 rolls of five die.
+
+```{r}
+## Basic For Loop
+
+start_time <- Sys.time()
+
+yahtzee_sim(10000000)
+
+Sys.time() - start_time
+
+```
+
+## Using Parallel Operations
+
+This time, we will divide the task into equal parts to be split across different CPUs. We take our original amount of 10,000,000 simulations and instead divide them into four tasks of 2,500,000 simulations. The `.combine` option from in the `foreach` function allows us to specify how we would like our results from each of the four tasks combined at the end. In this case, we sum up the number of successes or Yahtzees found. 
+
+```{r}
+start_time <- Sys.time()
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+foreach(i=1:4, .combine = sum) %dopar% {
+  yahtzee_sim(2500000)
+}
+
+stopCluster(cl)
+
+Sys.time() - start_time
+```
+
+## Rcpp in R Code
+
+In order to use Rcpp, there are a couple of options. We will start by exporting the string of an Rcpp function and compiling it inline with R code. This is the least intrusive way of using Rcpp, but it is the most difficult to debug.
+
+```{r}
+library(Rcpp)
+
+start_time <- Sys.time()
+
+yahtzee_sim_cpp_string <- "int yahtzee_sim_cpp(int num_sim){
+                             int count_result = 0;
+                             
+                             for(int i = 0; i < num_sim; i++){
+                               NumericVector die_roll = round(runif(5, 1, 5), 0);
+                               if(unique(die_roll).length() == 1){
+                                 count_result++;
+                               }
+                             }
+
+                            return(count_result);
+                           }"
+
+cppFunction(yahtzee_sim_cpp_string)
+yahtzee_sim_cpp(100000000)
+
+Sys.time() - start_time
+
+```
+
+## Rcpp in a Separate File
+
+We can use Rcpp in another file. In this repository is another file named `yahtzee.cpp` which contains separate code for this function. We can source that function into our environment to use using Rcpp.
+
+```{r}
+start_time <- Sys.time()
+
+sourceCpp('/home/jordanlove/repos/ShinyRiskAnalysis/yahtzee.cpp')
+yahtzee_sim_cpp_external(10000000)
+
+Sys.time() - start_time
+```
+
+## Using Julia
+
+```{r}
+library(JuliaCall)
+
+julia <- julia_setup(JULIA_HOME = '/var/lib/snapd/snap/bin', verbose = TRUE)
+
+
+```
+
+## Combining Rcpp & doParallel
+
+```{r}
+start_time <- Sys.time()
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+foreach(i=1:4, .combine = sum, .packages = 'Rcpp') %dopar% {
+  
+  yahtzee_sim_cpp_string <- "int yahtzee_sim_cpp(int num_sim){
+                             int count_result = 0;
+                             
+                             for(int i = 0; i < num_sim; i++){
+                               NumericVector die_roll = round(runif(5, 1, 5), 0);
+                               if(unique(die_roll).length() == 1){
+                                 count_result++;
+                               }
+                             }
+
+                            return(count_result);
+                           }"
+
+  Rcpp::cppFunction(yahtzee_sim_cpp_string)
+  
+  yahtzee_sim_cpp(25000000)
+}
+
+stopCluster(cl)
+
+Sys.time() - start_time
+```
